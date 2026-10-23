@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07111f"><title>LinkPlay — مشغّل الويب</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#0f1f31;--green:#10b981;--text:#f1f5f9;--muted:#94a3b8}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#123044 0,var(--bg) 55%);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:grid;place-items:center;padding:22px}
+main{width:min(920px,100%)}.brand{color:var(--green);font-size:13px;font-weight:800;letter-spacing:.18em;direction:ltr;text-align:left}h1{font-size:clamp(24px,5vw,38px);margin:20px 0 8px}p{color:var(--muted);line-height:1.8}.player{margin-top:22px;background:#000;border:1px solid #233649;border-radius:18px;overflow:hidden;aspect-ratio:16/9;display:grid;place-items:center}video{width:100%;height:100%;max-height:70vh;background:#000}#message{padding:24px;text-align:center;color:var(--muted)}.url{margin-top:14px;padding:12px;border:1px solid #233649;border-radius:12px;background:var(--panel);overflow-wrap:anywhere;font-size:12px;color:var(--muted)}a{color:var(--green)}button{margin-top:12px;border:0;border-radius:12px;background:var(--green);color:#031914;font-weight:700;padding:12px 18px;font-size:14px}
+</style></head>
+<body><main><div class="brand">LINKPLAY</div><h1>مشغّل الفيديو</h1><p>تشغيل مباشر في المتصفح باستخدام مشغّل HTML5.</p>
+<div class="player"><video id="video" controls playsinline preload="metadata" hidden></video><div id="message">جارٍ تجهيز رابط الفيديو…</div></div>
+<div class="url" id="source"></div><button id="open" hidden>فتح ملف الفيديو مباشرة</button>
+<p>إذا لم يعمل الفيديو، فقد يكون الرابط غير مباشر أو الخادم لا يسمح بالبث داخل المتصفح.</p>
+<script>
+const params=new URLSearchParams(location.search),url=params.get('url'),video=document.getElementById('video'),message=document.getElementById('message'),source=document.getElementById('source'),open=document.getElementById('open');
+function fail(t){message.hidden=false;message.textContent=t;video.hidden=true}
+if(!url){fail('أضف رابط فيديو بعد ?url= في عنوان الصفحة.');}
+else {let parsed;try{parsed=new URL(url)}catch(e){} if(!parsed||parsed.protocol!=='https:'||!(parsed.hostname==='github.com'||parsed.hostname==='raw.githubusercontent.com'||parsed.hostname==='objects.githubusercontent.com'||parsed.hostname.endsWith('.githubusercontent.com'))){fail('الرابط غير صالح أو ليس من نطاق GitHub المسموح.');}
+else {source.textContent=url;video.src=url;video.hidden=false;message.hidden=true;open.hidden=false;open.onclick=()=>location.href=url;video.addEventListener('error',()=>fail('تعذّر تشغيل الفيديو. تأكد أن الرابط مباشر وأن الخادم يسمح بالبث.'));}}
+</script></main></body></html>

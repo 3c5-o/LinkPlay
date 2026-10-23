@@ -49,10 +49,11 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout.LayoutParams tip=new LinearLayout.LayoutParams(-1,-2);tip.topMargin=dp(9);card.addView(titleInput,tip);
         MaterialButton save=button("حفظ الرابط بالعنوان",green,0xFF031914);addButton(card,save,12);save.setOnClickListener(v->saveCurrent());
         MaterialButton play=button("تشغيل داخل LinkPlay",0xFF176B54,white);addButton(root,play,14);play.setOnClickListener(v->internal());
-        MaterialButton ext=button("فتح بمشغّل خارجي",0xFF233649,white);addButton(root,ext,8);ext.setOnClickListener(v->external());
-        MaterialButton web=button("إنشاء رابط تشغيل للمتصفح",green,0xFF031914);addButton(root,web,8);web.setOnClickListener(v->makeBrowserLink());
+        MaterialButton ext=button("فتح الرابط الأصلي بمشغّل خارجي",0xFF233649,white);addButton(root,ext,8);ext.setOnClickListener(v->external());
+        MaterialButton convert=button("تحويل إلى رابط المشغّل الخارجي وفتحه",green,0xFF031914);addButton(root,convert,8);convert.setOnClickListener(v->convertAndOpenExternal());
+        MaterialButton web=button("إنشاء رابط تشغيل للمتصفح",0xFF233649,white);addButton(root,web,8);web.setOnClickListener(v->makeBrowserLink());
         browserLink=text("",12,green,false);browserLink.setTextIsSelectable(true);LinearLayout.LayoutParams blp=new LinearLayout.LayoutParams(-1,-2);blp.topMargin=dp(8);root.addView(browserLink,blp);
-        MaterialButton copy=button("نسخ رابط المتصفح",0xFF233649,white);addButton(root,copy,5);copy.setOnClickListener(v->{String s=browserLink.getText().toString();if(s.startsWith("https://")){((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("LinkPlay browser link",s));status.setText("تم نسخ رابط المتصفح.");}else status.setText("أنشئ رابط المتصفح أولاً.");});
+        MaterialButton copy=button("نسخ الرابط الظاهر",0xFF233649,white);addButton(root,copy,5);copy.setOnClickListener(v->{String s=browserLink.getText().toString();if(s.startsWith("https://")){((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("LinkPlay converted link",s));status.setText("تم نسخ الرابط.");}else status.setText("أنشئ أو حوّل الرابط أولاً.");});
         status=text("يدعم ملفات الفيديو العامة التي يسمح خادمها بالبث.",13,muted,false);status.setLineSpacing(dp(3),1);LinearLayout.LayoutParams st=new LinearLayout.LayoutParams(-1,-2);st.topMargin=dp(12);root.addView(status,st);
         TextView savedHeading=text("الروابط المحفوظة",19,white,true);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.topMargin=dp(28);root.addView(savedHeading,hp);
         savedList=new LinearLayout(this);savedList.setOrientation(1);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(12);root.addView(savedList,lp);
@@ -66,6 +67,24 @@ public class MainActivity extends AppCompatActivity {
     void internal(){String u=valid();if(u==null)return;hideKeyboard();Intent i=new Intent(this,PlayerActivity.class);i.putExtra("url",u);startActivity(i);}
     void external(){String u=valid();if(u==null)return;Intent i=new Intent(Intent.ACTION_VIEW);i.setDataAndType(Uri.parse(u),"video/*");try{startActivity(Intent.createChooser(i,"اختيار مشغّل الفيديو"));}catch(Exception e){status.setText("ماكو مشغّل خارجي مناسب مثبت.");}}
     void makeBrowserLink(){String u=valid();if(u==null)return;String link="https://3c5-o.github.io/LinkPlay/player/?url="+Uri.encode(u);browserLink.setText(link);status.setText("تم إنشاء رابط صفحة المشغّل. قد يحتاج نشر صفحة الويب أولاً حتى يصبح متاحاً.");}
+    String externalWorkerUrl(String source){
+        Uri src=Uri.parse(source);String host=src.getHost();String path=src.getEncodedPath();
+        if(host==null||path==null)return null;
+        if(host.equalsIgnoreCase("mute-breeze-eaf0.smyzx66.workers.dev"))return source;
+        if(!host.equalsIgnoreCase("github.com")||!path.contains("/releases/download/"))return null;
+        String lower=path.toLowerCase();
+        if(!(lower.endsWith(".mp4")||lower.endsWith(".m4v")||lower.endsWith(".webm")||lower.endsWith(".mov")))return null;
+        Uri.Builder out=new Uri.Builder().scheme("https").authority("mute-breeze-eaf0.smyzx66.workers.dev").encodedPath(path);
+        if(src.getEncodedQuery()!=null)out.encodedQuery(src.getEncodedQuery());
+        return out.build().toString();
+    }
+    void convertAndOpenExternal(){
+        String u=valid();if(u==null)return;String converted=externalWorkerUrl(u);
+        if(converted==null){status.setText("هذا التحويل مخصص لروابط GitHub Releases التي تحتوي على /releases/download/ وملف فيديو مدعوم.");return;}
+        browserLink.setText(converted);status.setText("تم تحويل الرابط. اختر مشغّل فيديو خارجي إذا طلب أندرويد ذلك.");
+        Intent i=new Intent(Intent.ACTION_VIEW);i.setDataAndType(Uri.parse(converted),"video/*");
+        try{startActivity(Intent.createChooser(i,"اختيار مشغّل الفيديو"));}catch(Exception e){status.setText("تعذّر فتح الرابط. انسخه وجربه داخل مشغّل يدعم روابط HTTPS.");}
+    }
     void saveCurrent(){String u=valid();if(u==null)return;String name=titleInput.getText()==null?"":titleInput.getText().toString().trim();if(name.isEmpty()){String p=Uri.parse(u).getLastPathSegment();name=(p==null||p.isEmpty())?"فيديو محفوظ":p;}JSONArray arr=readSaved();for(int i=arr.length()-1;i>=0;i--){JSONObject o=arr.optJSONObject(i);if(o!=null&&u.equals(o.optString("url")))arr.remove(i);}JSONObject item=new JSONObject();try{item.put("title",name);item.put("url",u);item.put("savedAt",System.currentTimeMillis());arr.put(item);}catch(JSONException ignored){}getSharedPreferences(PREFS,MODE_PRIVATE).edit().putString(KEY,arr.toString()).apply();renderSaved();status.setText("تم حفظ الرابط بعنوان: "+name);}
     JSONArray readSaved(){try{return new JSONArray(getSharedPreferences(PREFS,MODE_PRIVATE).getString(KEY,"[]"));}catch(Exception e){return new JSONArray();}}
     void renderSaved(){if(savedList==null)return;savedList.removeAllViews();JSONArray a=readSaved();if(a.length()==0){TextView empty=text("ماكو روابط محفوظة لحد الآن.",13,muted,false);savedList.addView(empty);return;}for(int i=a.length()-1;i>=0;i--){JSONObject o=a.optJSONObject(i);if(o==null)continue;final String name=o.optString("title","فيديو محفوظ"),url=o.optString("url","");LinearLayout c=new LinearLayout(this);c.setOrientation(1);c.setPadding(dp(13),dp(13),dp(13),dp(13));c.setBackground(shape(panel,14));LinearLayout.LayoutParams cpar=new LinearLayout.LayoutParams(-1,-2);cpar.bottomMargin=dp(10);savedList.addView(c,cpar);c.addView(text(name,15,white,true));TextView small=text(url,11,muted,false);small.setMaxLines(2);small.setTextIsSelectable(true);LinearLayout.LayoutParams smp=new LinearLayout.LayoutParams(-1,-2);smp.topMargin=dp(6);c.addView(small,smp);LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);c.addView(row);MaterialButton run=button("تشغيل",green,0xFF031914);row.addView(run,new LinearLayout.LayoutParams(0,dp(42),1));run.setOnClickListener(v->{input.setText(url);titleInput.setText(name);internal();});MaterialButton web=button("المتصفح",0xFF233649,white);LinearLayout.LayoutParams wp=new LinearLayout.LayoutParams(0,dp(42),1);wp.leftMargin=dp(5);row.addView(web,wp);web.setOnClickListener(v->{input.setText(url);titleInput.setText(name);makeBrowserLink();});MaterialButton del=button("حذف",0xFF552C38,white);LinearLayout.LayoutParams dpv=new LinearLayout.LayoutParams(0,dp(42),1);dpv.leftMargin=dp(5);row.addView(del,dpv);del.setOnClickListener(v->{deleteSaved(url);});}}

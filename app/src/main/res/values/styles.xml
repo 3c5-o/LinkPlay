@@ -1,0 +1,3 @@
+<resources><style name="Theme.LinkPlay" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+<item name="colorPrimary">#10B981</item><item name="colorPrimaryVariant">#047857</item><item name="colorSecondary">#34D399</item><item name="android:fontFamily">sans</item><item name="android:statusBarColor">#07111F</item><item name="android:navigationBarColor">#07111F</item><item name="android:windowLightStatusBar">false</item><item name="android:windowBackground">#07111F</item>
+</style></resources>
